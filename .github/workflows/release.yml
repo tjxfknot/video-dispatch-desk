@@ -1,0 +1,154 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag name (e.g. v0.6.12)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Offline Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run offline test suite
+        run: npm test
+
+  build-mac:
+    name: Build macOS (arm64)
+    needs: test
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Package macOS arm64 zip
+        run: npm run dist:mac
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-mac-arm64
+          path: dist/video-dispatch-desk-*-mac-arm64.zip
+          if-no-files-found: error
+
+  build-win:
+    name: Build Windows (x64)
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Package Windows x64 zip
+        run: npm run dist:win
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-win-x64
+          path: dist/video-dispatch-desk-*-win-x64.zip
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [build-mac, build-win]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Generate SHA256SUMS
+        run: |
+          cd release-assets
+          sha256sum *.zip > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Resolve release tag
+        id: meta
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          if [ -n "$INPUT_TAG" ]; then
+            echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          python3 - <<'PY'
+          import os
+          tag = os.environ["TAG"]
+          notes = f"""## Video Dispatch Desk {tag}
+
+          ### 支持平台
+          - **抖音（Douyin）**：横竖双封面、原生话题、自主声明、定时发布、可见范围与官方作品接口回执核查
+          - **微信视频号（WeChat Channels）**：竖/横封面、视频标注、定位清理、定时发表与官方作品接口回执核查
+          - **小红书（Xiaohongshu）**：竖版封面、话题候选、内容类型声明、可见范围、定时发布与官方笔记接口回执核查
+
+          ### 安装包说明
+          - `video-dispatch-desk-*-mac-arm64.zip`：macOS Apple Silicon 免安装压缩包（未签名/未公证，首次打开见 README）
+          - `video-dispatch-desk-*-win-x64.zip`：Windows 64 位免安装便携压缩包（首个 Windows 兼容版本，已在 GitHub Actions `windows-latest` 通过全量离线回归与原生打包，欢迎真机试用反馈）
+          - `SHA256SUMS.txt`：压缩包 SHA-256 校验值
+          """
+          lines = [line[10:] if line.startswith("          ") else line for line in notes.splitlines()]
+          with open("release-notes.md", "w", encoding="utf-8") as f:
+              f.write("\n".join(lines).strip() + "\n")
+          PY
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release-assets/* --clobber
+          else
+            gh release create "$TAG" release-assets/* --title "$TAG" --notes-file release-notes.md
+          fi

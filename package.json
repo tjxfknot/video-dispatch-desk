@@ -1,0 +1,79 @@
+{
+  "name": "video-dispatch-desk",
+  "productName": "视频发布台",
+  "version": "0.6.12",
+  "description": "多平台短视频本地发布操作台（支持抖音、视频号、小红书；多账号专属浏览器隔离、定时发布与官方回执核查）",
+  "main": "app/main.cjs",
+  "author": "tjxf",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tjxfknot/video-dispatch-desk.git"
+  },
+  "homepage": "https://github.com/tjxfknot/video-dispatch-desk#readme",
+  "bugs": {
+    "url": "https://github.com/tjxfknot/video-dispatch-desk/issues"
+  },
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.cjs",
+    "pack:mac": "electron-builder --mac dir --arm64",
+    "dist:mac": "electron-builder --mac zip --arm64",
+    "dist:win": "electron-builder --win zip --x64",
+    "installer:win": "electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "45.2.1",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "io.github.tjxfknot.videodispatchdesk",
+    "asar": true,
+    "files": [
+      "app/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "chrome-connector",
+        "to": "chrome-connector"
+      }
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "icon": "app/assets/icon.icns",
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "identity": null
+    },
+    "win": {
+      "icon": "app/assets/icon.ico",
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "artifactName": "video-dispatch-desk-${version}-${os}-${arch}.${ext}"
+  },
+  "dependencies": {
+    "playwright-core": "1.64.1"
+  }
+}

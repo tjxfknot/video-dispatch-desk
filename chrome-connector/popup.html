@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>老师账号连接</title>
+  <link rel="stylesheet" href="popup.css">
+  <script src="popup.js" defer></script>
+</head>
+<body>
+  <main>
+    <h1>老师账号连接</h1>
+    <p class="intro">每位老师使用独立Chrome个人资料。打开连接器，识别当前资料中的抖音号，再回工作台确认老师归属。</p>
+    <button id="open-account-connector" type="button">打开老师账号连接器</button>
+    <p class="hint">当前版本只检查账号身份，不上传视频或提交作品。</p>
+    <details><summary>旧版只读探针（诊断）</summary>
+    <p class="intro">请先在当前标签打开 <code>creator.douyin.com</code>，再从工具栏点击本扩展。</p>
+
+    <label for="port">本机端口</label>
+    <input id="port" name="port" type="number" min="1024" max="65535" step="1" value="48627" autocomplete="off" inputmode="numeric">
+
+    <label for="code">一次性配对码</label>
+    <input id="code" name="code" type="password" minlength="32" maxlength="32" pattern="[0-9a-f]{32}" autocomplete="off" spellcheck="false" autocapitalize="off" aria-describedby="code-help">
+    <p id="code-help" class="hint">从分发台的配对面板复制输入。配对码不会保存。</p>
+
+    <button id="connect" type="button">读取当前抖音页并连接</button>
+    <p id="status" class="status" role="status" aria-live="polite">本扩展只读取可见标签摘要，不上传或发布。</p>
+    </details>
+  </main>
+</body>
+</html>

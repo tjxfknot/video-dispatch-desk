@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' asset: data:; media-src 'self' asset:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>视频发布台 · 本地工作空间</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="managed-browser-ui.js" defer></script>
+  <script src="teacher-profile-ui.js" defer></script>
+  <script src="../core/publish-settings.cjs" defer></script>
+  <script src="../core/publish-schedule.cjs" defer></script>
+  <script src="publish-settings-ui.js" defer></script>
+  <script src="publish-readiness.js" defer></script>
+  <script src="managed-pilot-ui.js" defer></script>
+  <script src="publish-record-model.js" defer></script>
+  <script src="publish-history-ui.js" defer></script>
+  <script src="preparation-test-ui.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- 顶部栏 -->
+    <header class="topbar">
+      <div class="brand-group">
+        <button class="brand-btn" id="brand-home" type="button" title="回到主界面" aria-label="视频发布台首页">
+          <span class="brand-glyph" aria-hidden="true">
+            <i class="g1"></i><i class="g2"></i><i class="g3"></i><i class="g4"></i>
+          </span>
+          <span>视频发布台</span>
+        </button>
+        <button class="back-home-btn" id="back-home-btn" type="button" hidden>← 返回主界面</button>
+        <span class="crumb-pill" id="crumb-current">主界面</span>
+      </div>
+      <div class="topbar-right">
+        <span class="engine-chip" id="engine-chip"><i></i><span>正在检查本机能力</span></span>
+        <button class="diag-btn" id="preparation-test-open" type="button">诊断与测试</button>
+      </div>
+    </header>
+
+    <!-- 全局提醒与实时状态区（非空时展示，完整保留全部原保护能力） -->
+    <div class="global-banners">
+      <div class="preview-banner" id="preview-banner" hidden>
+        <span class="banner-icon">i</span>
+        <div>
+          <strong>浏览器预览模式</strong>
+          <p>当前页面没有连接桌面桥接。可浏览界面；文件选择、保存、校验、队列和导出请使用桌面版。</p>
+        </div>
+      </div>
+
+      <section class="account-alerts" id="account-alerts" aria-live="polite" aria-label="账号需要处理" hidden></section>
+
+      <section class="real-task-panel" id="real-task-panel" aria-labelledby="real-task-title" hidden>
+        <div class="real-panel-head">
+          <div class="real-panel-heading">
+            <span class="real-kicker">DOUYIN REAL TEST · 本机交接</span>
+            <h2 id="real-task-title">抖音真实测试 <span id="real-panel-task">—</span></h2>
+          </div>
+          <span class="real-panel-state" id="real-panel-state" aria-live="polite">等待状态</span>
+          <button class="button button-quiet real-history-button" id="real-panel-history" type="button">查看任务记录</button>
+        </div>
+        <div class="real-panel-body">
+          <div class="real-facts">
+            <div class="real-fact"><small>实际账号</small><b id="real-panel-account">尚未核对</b></div>
+            <div class="real-fact"><small>本条标题</small><b id="real-panel-title">—</b></div>
+            <div class="real-fact"><small>发布时间</small><b id="real-panel-schedule">立即发布</b></div>
+            <div class="real-fact"><small>本机交接</small><b id="real-panel-mode">单条抖音 · 不填写定位</b></div>
+          </div>
+          <div class="real-session-card">
+            <div class="real-session-grid">
+              <div><small>助手端口</small><b id="real-panel-port">等待本机交接</b></div>
+              <div><small>有效至</small><b id="real-panel-expiry">—</b></div>
+            </div>
+            <small class="real-code-label">一次性任务码（只在助手手工输入）</small>
+            <code class="real-pair-code" id="real-panel-code">—</code>
+            <small class="real-code-note" id="real-panel-code-note">任务码失效或进入授权/提交后不再显示。</small>
+          </div>
+          <ol class="real-steps" aria-label="助手操作步骤">
+            <li>在已登录的 Chrome 打开抖音创作者中心，并停在本次发布页。</li>
+            <li>点击扩展打开独立助手；不要关闭原来的发布标签页。</li>
+            <li>把本机端口和任务码手工输入助手，等待核对账号与上传填写。</li>
+            <li>操作台出现“等待确认发布”后，再回到这里核对最终快照。</li>
+          </ol>
+        </div>
+        <div class="real-panel-foot">
+          <p class="real-panel-warning" id="real-panel-warning">助手会上传并填写，但不会自动提交。</p>
+          <div class="real-panel-actions">
+            <button class="button button-real" id="real-panel-confirm" type="button" hidden>核对并确认发布到抖音</button>
+            <button class="button button-quiet" id="real-panel-stop" type="button" hidden>停止本机交接</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ==================== 视图 0：主界面（严格 4 个不重叠独立几何块） ==================== -->
+    <main class="view active" id="view-home" aria-label="主界面">
+      <div class="home-stage">
+        <header class="home-hero">
+          <h1 class="home-hero-title" id="home-hero-title">多平台视频发布台</h1>
+        </header>
+        <section class="geo-grid" aria-label="核心功能入口">
+          <!-- 1. 左侧：开始新发布 — 柔雾白正圆 -->
+          <button class="geo-tile tile-publish" id="tile-publish" type="button">
+            <span class="tile-title">开始新发布</span>
+            <span class="tile-sub" id="home-publish-sub">准备新的多平台发布任务</span>
+            <span class="tile-arrow" aria-hidden="true">→</span>
+          </button>
+
+          <!-- 右栏：严格两行，上下边缘与左侧 420px 大圆齐平且保留间距不交错 -->
+          <div class="geo-right">
+            <!-- 2. 右上：发布记录 — 亮钴蓝长条圆弧胶囊 -->
+            <button class="geo-tile tile-history" id="tile-history" type="button">
+              <div class="tile-history-inner">
+                <div>
+                  <div class="tile-title">发布记录</div>
+                  <div class="tile-sub" id="home-history-sub">查看各平台结果与回执</div>
+                </div>
+                <div class="tile-history-stats">
+                  <div class="tile-stat"><b id="history-count">0</b><span>发布记录</span></div>
+                  <div class="tile-stat"><b id="stat-published">0</b><span>已核对</span></div>
+                  <div class="tile-stat"><b id="stat-attention">0</b><span>待处理</span></div>
+                </div>
+              </div>
+            </button>
+
+            <div class="geo-bottom-row">
+              <!-- 3. 右下左（靠近大圆）：账号管理 — 柔樱花粉长条圆角，上下左右严格对齐网格 -->
+              <button class="geo-tile tile-accounts" id="tile-accounts" type="button">
+                <span class="tile-title">账号管理</span>
+                <span class="tile-sub" id="home-accounts-sub">0 位老师<br>0 个账号已绑定</span>
+              </button>
+
+              <!-- 4. 右下右（远离大圆）：标签管理 — 浅灰绿正圆形，上下右边缘严格对齐网格 -->
+              <button class="geo-tile tile-library" id="tile-library" type="button">
+                <span class="tile-title">标签管理</span>
+                <div class="tile-mini-tags" id="home-tag-preview"></div>
+                <span class="tile-library-foot" id="home-draft-hint">草稿与模板</span>
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- ==================== 视图 1：新建发布（4 步向导，零功能删减） ==================== -->
+    <section class="view" id="view-new" aria-labelledby="page-title">
+      <div class="stepper-bar">
+        <div class="stepper-inner">
+          <nav class="stepper" id="stepper" aria-label="发布步骤">
+            <button class="step-node active" data-step="1" type="button"><span class="step-num">1</span><span>选老师与素材</span></button>
+            <span class="step-line" data-line="1"></span>
+            <button class="step-node" data-step="2" type="button"><span class="step-num">2</span><span>文案与常用标签</span></button>
+            <span class="step-line" data-line="2"></span>
+            <button class="step-node" data-step="3" type="button"><span class="step-num">3</span><span>选平台与设置</span></button>
+            <span class="step-line" data-line="3"></span>
+            <button class="step-node" data-step="4" type="button"><span class="step-num">4</span><span>总览并发布</span></button>
+          </nav>
+
+          <div class="draft-controls">
+            <button class="button button-quiet button-sm" id="new-draft" type="button" title="保留当前草稿并新建">新建任务</button>
+            <label class="sr-only" for="draft-picker">恢复本地草稿</label>
+            <select id="draft-picker" class="compact-select"><option value="">恢复本地草稿…</option></select>
+            <button class="button button-quiet button-sm" id="restore-draft" type="button" disabled>恢复</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="page-wrap wizard-wrap">
+        <h1 class="sr-only" id="page-title">新建发布</h1>
+
+        <!-- ========== 步骤 1：选老师与素材 ========== -->
+        <div class="step-pane" id="pane-step-1">
+          <div class="sec-block">
+            <div class="sec-head">
+              <h2><span class="sec-num">1</span>选择归属老师 <span class="sec-sub">只展示该老师名下绑定的平台账号，防止串号错发</span></h2>
+              <button class="button button-quiet button-sm" id="manage-teachers" type="button">管理老师与账号</button>
+            </div>
+            <div class="teacher-grid" id="step1-teacher-grid"></div>
+            <details class="fold-drawer teacher-select-drawer" id="draft-teacher-panel">
+              <summary><span id="draft-teacher-title">老师切换说明与下拉选择</span><small id="draft-teacher-note">默认不选择老师；选择后只显示该老师名下账号，切换老师会清空平台账号与独立设置。</small></summary>
+              <div class="fold-body">
+                <label class="teacher-strip-control" for="draft-teacher">
+                  <span>当前任务归属老师</span>
+                  <select id="draft-teacher"><option value="">不选择老师（未分配）</option></select>
+                </label>
+              </div>
+            </details>
+          </div>
+
+          <div class="sec-block">
+            <div class="sec-head">
+              <h2><span class="sec-num">2</span>投递素材 <span class="sec-sub">可直接选整个素材文件夹，或把 1 个视频 + 横竖封面一起拖进来自动归位</span></h2>
+              <span class="section-state" id="asset-state">等待选择</span>
+            </div>
+
+            <div class="drop-shell" id="drop-zone">
+              <div class="drop-banner empty" id="drop-banner">
+                <span id="drop-banner-text">直接把素材文件夹（或视频和横竖封面）拖到这里，或点击右侧一键选择</span>
+                <div class="drop-banner-actions">
+                  <button class="button button-white button-sm" id="btn-pick-folder" type="button">选择素材文件夹</button>
+                  <button class="button button-quiet button-sm" id="btn-pick-files" type="button">选择多个文件</button>
+                  <button class="button button-quiet button-sm" id="btn-swap-covers" type="button" hidden>横竖对调</button>
+                </div>
+              </div>
+
+              <div class="asset-grid slots-grid">
+                <div class="asset-card video-card slot-card" id="video-slot">
+                  <div class="slot-top">
+                    <span class="slot-badge badge-sage" id="badge-video">主视频 · 待投递</span>
+                  </div>
+                  <div class="asset-placeholder video-placeholder preview-box">
+                    <span class="play-mark">▶</span>
+                    <b>拖入或选择视频</b>
+                    <small>MP4、MOV、WebM 或 M4V</small>
+                  </div>
+                  <video class="asset-video" controls preload="metadata" hidden></video>
+                  <div class="asset-meta" hidden>
+                    <div><b class="asset-name"></b><small class="asset-size"></small></div>
+                    <button class="icon-button remove-asset" type="button" aria-label="移除视频">×</button>
+                  </div>
+                  <button class="asset-action" data-asset-kind="video" type="button">＋ 选择视频</button>
+                </div>
+
+                <div class="asset-card cover-card slot-card" id="landscape-slot">
+                  <div class="slot-top">
+                    <span class="slot-badge badge-blue" id="badge-landscape">横版封面 · 待投递</span>
+                  </div>
+                  <div class="cover-preview landscape-preview preview-box">
+                    <span class="cover-glyph">▱</span>
+                    <b>横版封面</b>
+                    <small>自动识别 宽 ≥ 高（16:9 / 4:3）</small>
+                  </div>
+                  <div class="asset-meta" hidden>
+                    <div><b class="asset-name"></b><small class="asset-size"></small></div>
+                    <button class="icon-button remove-asset" type="button" aria-label="移除横版封面">×</button>
+                  </div>
+                  <button class="asset-action" data-asset-kind="landscape" type="button">＋ 选择横版封面</button>
+                </div>
+
+                <div class="asset-card cover-card slot-card" id="portrait-slot">
+                  <div class="slot-top">
+                    <span class="slot-badge badge-pink" id="badge-portrait">竖版封面 · 待投递</span>
+                  </div>
+                  <div class="cover-preview portrait-preview preview-box portrait">
+                    <span class="cover-glyph">▯</span>
+                    <b>竖版封面</b>
+                    <small>自动识别 高 &gt; 宽（3:4 / 9:16）</small>
+                  </div>
+                  <div class="asset-meta" hidden>
+                    <div><b class="asset-name"></b><small class="asset-size"></small></div>
+                    <button class="icon-button remove-asset" type="button" aria-label="移除竖版封面">×</button>
+                  </div>
+                  <button class="asset-action" data-asset-kind="portrait" type="button">＋ 选择竖版封面</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========== 步骤 2：文案与常用标签 ========== -->
+        <div class="step-pane" id="pane-step-2" hidden>
+          <div class="sec-block">
+            <div class="sec-head">
+              <h2><span class="sec-num">1</span>填写通用文案与时间 <span class="sec-sub">填一次即可同步给所有已选平台</span></h2>
+            </div>
+            <div class="form-card">
+              <label class="field full-field">
+                <span class="field-label-row"><span>标题 <em>必填</em></span><small id="title-count">0 / 300</small></span>
+                <input id="common-title" maxlength="300" placeholder="为这条视频写一个标题">
+              </label>
+              <label class="field full-field">
+                <span class="field-label-row"><span>简介</span><small>可选</small></span>
+                <textarea id="common-description" rows="4" maxlength="10000" placeholder="补充视频看点、简介或引导话术"></textarea>
+              </label>
+              <div class="field-row-2col">
+                <label class="field">
+                  <span>共同声明 <small>各平台可单独覆盖</small></span>
+                  <select id="shared-declaration" aria-label="共同声明">
+                    <option value="none">不统一设置，各平台单独选择</option>
+                    <option value="ai_generated">含 AI 生成内容</option>
+                    <option value="personal_opinion">个人观点或见解</option>
+                  </select>
+                  <small class="field-hint">对本次勾选的平台提出同一声明要求；平台不提供时会在下一步提示调整。</small>
+                </label>
+                <label class="field">
+                  <span>发布方式</span>
+                  <select id="schedule-mode">
+                    <option value="immediate">立即发布</option>
+                    <option value="scheduled">定时发布</option>
+                  </select>
+                  <small class="field-hint">定时发布使用各平台原生定时功能，以北京时间（UTC+08:00）为准。</small>
+                </label>
+              </div>
+              <label class="field full-field" id="schedule-at-field" hidden>
+                <span>发布时间 <small>北京时间（UTC+08:00）</small></span>
+                <input id="schedule-at" type="datetime-local" step="60">
+                <small class="field-hint">用平台自己的定时功能；各平台可选范围不同，见下方提示。</small>
+              </label>
+              <div class="schedule-limits full-field" id="schedule-limits" hidden aria-live="polite"></div>
+            </div>
+          </div>
+
+          <div class="sec-block">
+            <div class="sec-head">
+              <h2><span class="sec-num">2</span>点选常用标签 <span class="sec-sub">按当前老师自动切换，点一下即加入</span></h2>
+            </div>
+            <div class="form-card">
+              <div class="field">
+                <span class="field-label-row"><span>已选标签（用于本次发布）</span><small id="picked-tag-count">0 个</small></span>
+                <div class="selected-tags-box" id="selected-tags-box"></div>
+              </div>
+              <div class="field">
+                <span class="field-label-row"><span id="tag-pool-owner">当前老师常用标签</span><small>点击勾选或取消</small></span>
+                <div class="tag-pool" id="step2-tag-pool"></div>
+                <div class="add-tag-inline">
+                  <input id="input-new-tag" maxlength="80" placeholder="输入新标签，例如：干货分享">
+                  <button class="button button-quiet button-sm" id="btn-add-common-tag" type="button">+ 存为常用并选中</button>
+                </div>
+              </div>
+              <label class="field full-field raw-tags-field">
+                <span>手动批量输入标签 <small>逗号、顿号或换行分隔，与上方标签点选实时同步</small></span>
+                <input id="common-tags" placeholder="例如：高考志愿, 财经院校, 院校优选">
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========== 步骤 3：选平台与设置（严格零标签干扰） ========== -->
+        <div class="step-pane" id="pane-step-3" hidden>
+          <div class="sec-block">
+            <div class="sec-head">
+              <h2><span class="sec-num">1</span>勾选本次发布平台 <span class="sec-sub" id="selected-count">0 个平台</span></h2>
+              <button class="button button-outline button-sm" id="check-account-readiness" type="button">提前检查选中账号登录</button>
+            </div>
+            <div class="platform-row" id="platform-quick-row"></div>
+            <section id="publish-account-readiness" class="publish-account-readiness" aria-live="polite" aria-label="本次发布账号状态"></section>
+            <p class="readiness-footnote" id="account-readiness-note">点击提前检查才会打开原专属窗口核对。未连接账号请在下方平台卡片登录；程序复核后自动保存连接。检查只反映当时状态。</p>
+          </div>
+
+          <div class="sec-block">
+            <div class="sec-head">
+              <h2><span class="sec-num">2</span>已选平台专属确认与账号设置 <span class="sec-sub">未选平台默认收起，与通用文案一致的项已折叠</span></h2>
+              <button class="button button-quiet button-sm" id="toggle-unselected-platforms" type="button">展开未勾选平台</button>
+            </div>
+            <div class="platform-grid" id="platform-grid"></div>
+            <p class="location-note"><span aria-hidden="true">⌖</span> 每个平台可单独选择作品定位，默认不添加。只有明确选择“添加指定地点”才会设置；平台自身的地区展示由平台决定。</p>
+          </div>
+        </div>
+
+        <!-- ========== 步骤 4：总览并发布 ========== -->
+        <div class="step-pane" id="pane-step-4" hidden>
+          <div class="sec-block">
+            <div class="sec-head">
+              <h2><span class="sec-num">1</span>发前最终总览 <span class="sec-sub" id="create-subtitle">核对素材、文案与平台账号，确认后由程序逐平台独立执行。</span></h2>
+            </div>
+            <div class="summary-grid">
+              <div class="summary-panel">
+                <h3>本次内容与素材</h3>
+                <div class="kv-list" id="summary-content-kv"></div>
+              </div>
+              <div class="summary-panel">
+                <h3>本次发布范围与设置</h3>
+                <div class="kv-list" id="summary-platform-kv"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sec-block">
+            <div class="sec-head">
+              <h2><span class="sec-num">2</span>发布前核对清单与环境状态 <span class="sec-sub">保留全部原发前核查项与本地草稿保存</span></h2>
+            </div>
+            <div class="step4-aux-grid">
+              <section class="rail-card checklist-card">
+                <div class="rail-kicker">发布前核对</div>
+                <ul>
+                  <li class="check-item" id="check-teacher"><i></i><span>选择任务归属老师</span></li>
+                  <li class="check-item" id="check-video"><i></i><span>选择视频</span></li>
+                  <li class="check-item" id="check-title"><i></i><span>填写通用标题</span></li>
+                  <li class="check-item" id="check-platform"><i></i><span>选择目标平台</span></li>
+                  <li class="check-item" id="check-account"><i></i><span>选择当前老师账号</span></li>
+                </ul>
+                <p class="check-footnote">声明与合集在执行时会按平台页面实况核验与回读。</p>
+              </section>
+
+              <section class="rail-card status-card">
+                <div class="rail-kicker"><span class="status-dot"></span>当前环境</div>
+                <h3 id="environment-title">本机预览</h3>
+                <p id="environment-copy">尚未连接桌面能力。后端操作不可用。</p>
+                <div class="rail-divider"></div>
+                <div class="mini-stat"><span>目标平台</span><b id="rail-target-count">0 / 5</b></div>
+                <div class="mini-stat"><span>素材状态</span><b id="rail-asset-count">未选择</b></div>
+                <div class="mini-stat"><span>当前老师账号</span><b id="rail-account-count">0 个</b></div>
+                <div class="rail-save-row">
+                  <button class="button button-outline button-sm" id="save-draft" type="button">保存本地草稿</button>
+                  <span class="inline-feedback" id="draft-feedback" aria-live="polite"></span>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 固定底部动作栏（步骤 3 保持纯净零标签） -->
+      <footer class="action-bar" id="action-bar" hidden>
+        <div class="action-bar-left">
+          <button class="button button-quiet" id="btn-prev-step" type="button" hidden>← 上一步</button>
+          <div class="action-status" id="action-status">
+            <span class="action-lock" aria-hidden="true">⌑</span>
+            <span><b id="action-status-title">准备发布</b><small id="engine-reason">逐步核对素材、文案与平台后执行。</small></span>
+          </div>
+        </div>
+        <div class="action-bar-right">
+          <button class="button button-quiet" id="save-draft-top" type="button">保存草稿</button>
+          <button class="button button-primary button-large" id="btn-next-step" type="button">下一步：文案与标签 →</button>
+          <div class="action-buttons" id="step4-action-buttons" hidden>
+            <button class="button button-real" id="douyin-real-test" type="button" disabled title="真实发布能力尚未接通；账号绑定与在线不代表可发布">真实发布未接通</button>
+            <button class="button button-quiet" id="review-button" type="button">本地演练（不发布）</button>
+          </div>
+        </div>
+      </footer>
+    </section>
+
+    <!-- ==================== 视图 2：发布记录 ==================== -->
+    <section class="view" id="view-history" aria-labelledby="history-title">
+      <div class="page-wrap">
+        <div class="subpage-head">
+          <div>
+            <h1 id="history-title">发布记录</h1>
+            <p id="history-subtitle">查看每个平台的发布结果，追溯当时的内容与处理经过。</p>
+          </div>
+          <span class="history-total" id="history-total">0 条发布记录</span>
+        </div>
+        <div id="history-tools" class="publish-history-tools"></div>
+        <div class="run-list" id="run-list"></div>
+      </div>
+    </section>
+
+    <!-- ==================== 视图 3：老师与账号 ==================== -->
+    <section class="view" id="view-accounts" aria-labelledby="accounts-title">
+      <div class="page-wrap">
+        <div class="subpage-head">
+          <div>
+            <h1 id="accounts-title">老师与账号</h1>
+            <p id="library-subtitle">账号按老师严格隔离，每个账号使用独立浏览器登录环境，防止串号错发。</p>
+          </div>
+        </div>
+        <div class="teacher-workspace">
+          <aside class="panel teacher-directory" aria-label="老师列表">
+            <div class="teacher-directory-heading">
+              <h2>我的老师</h2>
+              <button class="button button-white button-sm" id="new-teacher" type="button">＋ 添加老师</button>
+            </div>
+            <p class="profile-help">选择一位老师，管理这位老师的完整资料。不会切换当前发布任务。</p>
+            <div class="teacher-list" id="teacher-list"></div>
+          </aside>
+          <section class="panel teacher-profile-panel" aria-labelledby="teacher-profile-title">
+            <div class="profile-heading">
+              <div>
+                <span class="profile-step">老师资料</span>
+                <h2 id="teacher-profile-title">添加老师</h2>
+                <p id="teacher-form-context">填写完整资料，最后统一确认。</p>
+              </div>
+              <span class="profile-save-state" id="teacher-save-state" role="status">尚未保存</span>
+            </div>
+            <div class="profile-switch-prompt" id="teacher-switch-prompt" role="alert" hidden>
+              <p>这份老师资料有未保存的更改。切换后将放弃这些更改。</p>
+              <button class="button button-quiet" id="teacher-keep-editing" type="button">继续编辑</button>
+              <button class="button button-outline" id="teacher-discard-switch" type="button">放弃更改并切换</button>
+            </div>
+            <form id="teacher-profile-form" novalidate>
+              <label class="field">
+                <span>老师姓名 <em>必填</em></span>
+                <input id="teacher-name" maxlength="100" placeholder="例如：创作者A" required autocomplete="off">
+              </label>
+              <fieldset class="profile-defaults">
+                <legend>默认发布平台 <small>可多选，也可以暂不设置</small></legend>
+                <p class="profile-help">新任务会自动勾选这些平台；每条任务仍可临时增减。修改这里不会改动已保存的任务。</p>
+                <div id="teacher-default-platforms" class="default-platform-options"></div>
+              </fieldset>
+              <section class="profile-accounts-section" aria-labelledby="profile-accounts-title">
+                <h3 id="profile-accounts-title">平台账号与登录连接</h3>
+                <p class="profile-help" id="teacher-login-guide">默认平台会准备对应的账号。确认添加后，在此打开官方窗口自行登录；也可以稍后连接。</p>
+                <div id="teacher-account-fields"></div>
+                <div id="teacher-more-platforms" class="teacher-more-platforms"></div>
+              </section>
+              <p class="profile-error" id="teacher-form-error" role="alert" hidden></p>
+              <div class="profile-form-actions">
+                <span id="teacher-save-help">填写完成后统一确认，扫码可以稍后进行。</span>
+                <button class="button button-quiet" id="reset-teacher-form" type="button">重置表单</button>
+                <button class="button button-primary" id="save-teacher" type="submit">确认添加老师</button>
+              </div>
+            </form>
+            <p class="account-form-note" id="account-bridge-note"></p>
+            <div id="account-list" class="account-list" hidden></div>
+            <section class="legacy-accounts" id="legacy-accounts" hidden>
+              <h3>未分配的旧账号</h3>
+              <p class="profile-help">只有明确点击“迁入”，才会归到右侧正在编辑且已保存的老师。不会自动认领。</p>
+              <div id="legacy-account-list"></div>
+            </section>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 视图 4：常用标签与模板（含草稿箱 Tab） ==================== -->
+    <section class="view" id="view-library" aria-labelledby="library-title">
+      <div class="page-wrap">
+        <div class="subpage-head">
+          <div>
+            <h1 id="library-title">常用标签与模板</h1>
+            <p>集中维护按老师隔离的常用标签池、本地草稿箱与文案配置模板。</p>
+          </div>
+          <div class="tab-bar" id="library-tabs" role="tablist">
+            <button class="tab-btn active" data-lib="tags" role="tab" aria-selected="true" type="button">常用标签</button>
+            <button class="tab-btn" data-lib="drafts" role="tab" aria-selected="false" type="button">本地草稿箱</button>
+            <button class="tab-btn" data-lib="templates" role="tab" aria-selected="false" type="button">文案模板</button>
+          </div>
+        </div>
+
+        <div id="lib-pane-tags" class="lib-pane">
+          <div id="library-tags-host" class="list-stack"></div>
+        </div>
+
+        <div id="lib-pane-drafts" class="lib-pane" hidden>
+          <div id="library-drafts-host" class="list-stack"></div>
+        </div>
+
+        <div id="lib-pane-templates" class="lib-pane" hidden>
+          <section class="form-card">
+            <p class="profile-help" id="template-context"></p>
+            <div class="template-form">
+              <label class="field">
+                <span>模板名称</span>
+                <input id="template-name" maxlength="100" placeholder="例如：每周栏目模板">
+              </label>
+              <button class="button button-white" id="save-template" type="button">保存当前任务设置为模板</button>
+            </div>
+            <div class="template-list" id="template-list"></div>
+          </section>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ==================== 全部原有弹窗（完整保留） ==================== -->
+  <div class="modal-backdrop" id="review-modal" hidden>
+    <section class="review-dialog" role="dialog" aria-modal="true" aria-labelledby="review-title">
+      <div class="dialog-top"><div class="dialog-icon">✓</div><button class="icon-button dialog-close" id="close-review" type="button" aria-label="关闭总览">×</button></div>
+      <div class="eyebrow">REVIEW BEFORE REHEARSAL</div><h2 id="review-title">核对本次演练</h2><p class="dialog-intro">请确认素材、目标账号与每个平台的文案设置。确认后只会在本机执行演练。</p>
+      <div class="validation-list" id="validation-list"></div>
+      <div class="review-summary" id="review-summary"></div>
+      <div class="review-warning"><b>演练边界</b><span>不会登录平台、传输素材、创建平台草稿或发布作品。</span></div>
+      <div class="dialog-actions"><button class="button button-quiet" id="back-to-edit" type="button">返回修改</button><button class="button button-primary" id="confirm-rehearsal" type="button">确认并开始本地演练</button></div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="real-review-modal" hidden>
+    <section class="review-dialog real-dialog" role="dialog" aria-modal="true" aria-labelledby="real-review-title">
+      <div class="dialog-top"><div class="dialog-icon real-dialog-icon">播</div><button class="icon-button dialog-close" id="close-real-review" type="button" aria-label="关闭真实测试总览">×</button></div>
+      <div class="eyebrow">LOCKED SNAPSHOT · DOUYIN ONLY</div>
+      <h2 id="real-review-title">核对本次抖音真实测试</h2>
+      <p class="dialog-intro">这是本次任务的不可变快照。确认后桌面桥接会锁定它；返回修改不会启动任何操作。</p>
+      <div class="real-snapshot" id="real-review-body"></div>
+      <div class="review-warning"><b>下一步</b><span>助手会尝试在已登录页面 <b>上传视频并填写文案、标签、横竖封面、原生声明和已有合集</b>。最终提交仍会停下来等你再次确认；操作台不会自动发布，也不填写定位。</span></div>
+      <div class="dialog-actions">
+        <button class="button button-quiet" id="cancel-real-start" type="button">返回修改</button>
+        <button class="button button-real" id="confirm-real-start" type="button">确认并启动本机交接</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="publish-confirm-modal" hidden>
+    <section class="review-dialog real-dialog" role="dialog" aria-modal="true" aria-labelledby="publish-confirm-title">
+      <div class="dialog-top"><div class="dialog-icon real-dialog-icon">✓</div><button class="icon-button dialog-close" id="close-publish-confirm" type="button" aria-label="关闭最终发布确认">×</button></div>
+      <div class="eyebrow">FINAL CONFIRMATION · SINGLE SUBMIT</div>
+      <h2 id="publish-confirm-title">核对并确认发布到抖音</h2>
+      <p class="dialog-intro">请再次核对这条不可变快照。只有你点击下方按钮，操作台才会向本机助手授权一次提交。</p>
+      <div class="real-snapshot" id="publish-confirm-body"></div>
+      <div class="publish-confirm-note" id="publish-confirm-note" aria-live="polite"></div>
+      <div class="dialog-actions">
+        <button class="button button-quiet" id="cancel-publish-confirm" type="button">暂不发布</button>
+        <button class="button button-real" id="confirm-publish" type="button">确认发布到抖音</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="stop-confirm-modal" hidden>
+    <section class="review-dialog real-dialog stop-dialog" role="dialog" aria-modal="true" aria-labelledby="stop-confirm-title">
+      <div class="dialog-top"><div class="dialog-icon stop-dialog-icon">■</div><button class="icon-button dialog-close" id="close-stop-confirm" type="button" aria-label="关闭停止确认">×</button></div>
+      <div class="eyebrow">STOP LOCAL HANDOFF</div>
+      <h2 id="stop-confirm-title">停止本机交接？</h2>
+      <p class="dialog-intro">停止只关闭本机端口和助手通道，不会删除平台草稿或已上传内容。</p>
+      <div class="real-snapshot compact" id="stop-confirm-body"></div>
+      <div class="review-warning danger"><b>可能已上传</b><span>如果助手已经开始上传，抖音页面可能已有草稿或作品。操作台无法自动删除，也不会自动重发。请到平台自行核对。</span></div>
+      <div class="dialog-actions">
+        <button class="button button-quiet" id="cancel-stop" type="button">继续等待</button>
+        <button class="button button-danger" id="confirm-stop" type="button">停止本机交接</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="unbind-modal" hidden>
+    <section class="review-dialog unbind-dialog" role="dialog" aria-modal="true" aria-labelledby="unbind-title">
+      <div class="dialog-top"><div class="dialog-icon stop-dialog-icon">断</div><button class="icon-button dialog-close" id="close-unbind" type="button" aria-label="关闭解除绑定确认">×</button></div>
+      <div class="eyebrow">UNBIND LOCAL IDENTITY</div>
+      <h2 id="unbind-title">解除本机账号绑定？</h2>
+      <p class="dialog-intro">解除只取消本机保存的真实号绑定，不会退出网站、不会删除浏览器环境，也不会删除账号备注和任务历史。</p>
+      <div class="unbind-account" id="unbind-account-body"></div>
+      <div class="publish-confirm-note" id="unbind-note">解除后需要重新连接并再次明确确认，才能绑回真实号。当前真实发布仍未接通。</div>
+      <div class="dialog-actions">
+        <button class="button button-quiet" id="cancel-unbind" type="button">保留绑定</button>
+        <button class="button button-danger" id="confirm-unbind" type="button">确认解除绑定</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

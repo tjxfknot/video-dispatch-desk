@@ -1,0 +1,30 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),os=require('node:os'),path=require('node:path'),{randomUUID}=require('node:crypto');
+const {chromium}=require('playwright-core');
+const {browserAvailability,createPageDriver}=require('../app/core/browser-driver.cjs');
+const {ManagedBrowsers}=require('../app/core/managed-browser.cjs');
+const available=browserAvailability().find(b=>b.available);
+test('连接诊断只保留路径和状态，不保留页面文字、账号号、完整URL参数或登录字段',t=>{
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'xhs-connection-diag-'));t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
+ const manager=new ManagedBrowsers({store:{},profilesRoot:root,diagnosticsRoot:root}),session={environmentId:randomUUID(),platform:'xiaohongshu'};
+ manager.recordPage(session,{url:'https://creator.xiaohongshu.com/new/home?token=private_query',text:'小红书号：private_identity\nCookie private_cookie',loginVisible:false});
+ const file=path.join(root,session.environmentId+'.json'),raw=fs.readFileSync(file,'utf8'),data=JSON.parse(raw);
+ assert.equal(data.path,'/new/home');assert.equal(data.state,'identified');assert.equal(data.labeledIdentityCount,1);assert.equal(data.identityPage,true);
+ for(const privateText of ['private_query','private_identity','private_cookie','Cookie','token='])assert.equal(raw.includes(privateText),false);
+ manager.recordPage(session,{url:'https://creator.xiaohongshu.com/user/private_identity',text:'private_text',loginVisible:false});
+ assert.equal(JSON.parse(fs.readFileSync(file)).path,'[other_path]');assert.equal(fs.readFileSync(file,'utf8').includes('private_identity'),false);
+ manager.recordPage(session,{url:'about:blank',text:'',navigationFailed:true,errorCode:'net::ERR_CONNECTION_TIMED_OUT'});
+ const blank=JSON.parse(fs.readFileSync(file));assert.equal(blank.blankPage,true);assert.equal(blank.navigationFailed,true);assert.equal(blank.errorCode,'net::ERR_CONNECTION_TIMED_OUT');
+ if (process.platform !== 'win32') assert.equal(fs.statSync(file).mode & 0o777,0o600);
+});
+test('小红书空白页在原环境重新读取后进入新首页，身份从真实DOM回读；请求全部本机拦截',{skip:!available},async t=>{
+ const browser=await chromium.launch({channel:available.id,headless:true});t.after(()=>browser.close());
+ const context=await browser.newContext({serviceWorkers:'block'}),requests=[];
+ await context.route('**/*',async route=>{requests.push(route.request().url());if(route.request().url()==='https://creator.xiaohongshu.com/new/home')return route.fulfill({contentType:'text/html; charset=utf-8',body:'<h1>合成创作后台</h1><p>小红书号：synthetic_xhs123</p>'});return route.abort();});
+ const original=await context.newPage(),observations=[];
+ const driver=createPageDriver({context,page:original,platform:'xiaohongshu',settleMs:500,onReadPage:data=>observations.push(data)});
+ assert.equal((await driver.read()).state,'unverifiable');
+ const result=await driver.read({fresh:true});assert.equal(result.state,'identified');assert.equal(result.identity.platformAccountId,'synthetic_xhs123');
+ assert.equal(original.isClosed(),false);assert.equal(original.url(),'about:blank');assert.equal(context.pages().at(-1).url(),'https://creator.xiaohongshu.com/new/home');
+ assert.deepEqual(requests,['https://creator.xiaohongshu.com/new/home']);assert.ok(observations.some(x=>x.url==='about:blank'));
+});

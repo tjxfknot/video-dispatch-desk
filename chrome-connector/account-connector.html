@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>分发台 · 老师账号连接</title><link rel="stylesheet" href="account-connector.css"><script src="account-connector.js" defer></script></head>
+<body><main>
+  <p class="eyebrow">分发台 / 本机账号连接</p>
+  <h1>连接这份 Chrome 资料中的老师账号</h1>
+  <p>每位老师使用独立 Chrome 个人资料。这里会新开抖音创作者首页，从页面显示的“抖音号”识别账号，再由你在工作台确认归属。</p>
+  <p class="note">当前只验证账号与环境，不上传视频、不填写发布内容、不提交作品。连接窗口可最小化，保持打开即可接收工作台的账号检查。</p>
+  <button id="authorize" type="button">允许连接抖音创作者站点</button>
+  <form id="pair-form">
+    <label>工作台显示的本机端口<input id="account-port" type="number" min="48717" max="48726" value="48717" required></label>
+    <label>一次性连接码<input id="account-code" type="password" minlength="32" maxlength="32" autocomplete="off" required></label>
+    <button id="pair-account" type="submit">识别账号并连接工作台</button>
+  </form>
+  <p id="connection-status" role="status" aria-live="polite">请先在该老师的Chrome个人资料中登录抖音，再从工作台发起连接。</p>
+  <dl><dt>程序读到的抖音号</dt><dd id="actual-account">尚未读取</dd></dl>
+  <details><summary>连接诊断</summary><dl><dt>本环境连接标识</dt><dd id="environment-id">等待初始化</dd></dl></details>
+  <button id="disconnect-account" class="quiet" type="button">停止本窗口连接</button>
+  <p class="small">不读取或导出网站登录凭据。只将账号标识和检查结果发往本机127.0.0.1。连接凭据仅保存在本份Chrome资料，停止连接不会退出抖音。</p>
+</main></body></html>
