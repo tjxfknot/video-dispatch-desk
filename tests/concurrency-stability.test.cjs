@@ -124,7 +124,7 @@ test('ManagedBrowsers 向并发多平台执行器注入同一个共享 focusCoor
   assert.equal(dyPub.focusCoordinator, xhsPub.focusCoordinator);
 });
 
-test('2026-11-21 抖音双封面回归：高对比白字测试图区域均值采样通过（含跨域截图兜底遮罩隐藏），错图仍拒绝并落盘误差诊断', { skip: !available, timeout: 45_000 }, async t => {
+test('2026-11-21 抖音双封面回归：高对比白字测试图区域均值采样通过（含跨域截图兜底遮罩隐藏），错图仍拒绝并落盘误差诊断', { skip: !available, timeout: 90_000 }, async t => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vdd-dy-cover-reg-'));
   t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 

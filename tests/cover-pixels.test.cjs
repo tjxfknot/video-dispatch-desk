@@ -22,6 +22,6 @@ test('封面不同尺寸和压缩预览按区域比较，同图不过度误报�
  const pixels={};for(const [key,source] of Object.entries(sources))pixels[key]=await page.evaluate(sampleCoverPixels,{source});
  assert.equal(coverPixelsMatch(pixels.original,pixels.preview),true);
  assert.equal(coverPixelsMatch(pixels.original,pixels.wrong),false);
- const old=[];for(const source of [sources.original,sources.preview])old.push(await page.evaluate(async source=>{const i=new Image();i.src=source;await i.decode();const c=document.createElement('canvas');c.width=c.height=16;const ctx=c.getContext('2d');ctx.drawImage(i,0,0,16,16);return [...ctx.getImageData(0,0,16,16).data].filter((_,i)=>i%4!==3);},source));
+ const old=[];for(const source of [sources.original,sources.preview])old.push(await page.evaluate(async source=>{const i=new Image();i.src=source;await i.decode();const c=document.createElement('canvas');c.width=c.height=16;const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=false;ctx.drawImage(i,0,0,16,16);return [...ctx.getImageData(0,0,16,16).data].filter((_,i)=>i%4!==3);},source));
  assert.equal(coverPixelsMatch(...old),false,'合成细节图应能复现旧版直接缩小的误报');
 });

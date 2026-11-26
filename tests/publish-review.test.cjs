@@ -29,7 +29,7 @@ function fixture(t) {
 
 test('素材目录改名后的失败留在发布记录，重开库仍能读到内容、账号和检查版本', t => {
   const f = fixture(t);
-  fs.renameSync(f.media, path.join(f.dir, ':素材'));
+  fs.renameSync(f.media, path.join(f.dir, '素材_改名后'));
   assert.throws(f.review, /素材不存在[\s\S]*已保存在发布记录/);
   const data = new JsonStore(f.store.filePath, {}).load(), run = data.runs[0];
   assert.equal(data.runs.length, 1);assert.equal(run.mode, 'publish_check');

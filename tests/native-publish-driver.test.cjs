@@ -286,7 +286,7 @@ test('两平台原生执行器在隔离页面完成真实控件流程，外部�
  });
  await t.test('上传页识别失败且附加诊断不可用时，仍先落盘原失败和阶段，不留下空目录',async()=>{
   const diagnosticDir=path.join(dir,'tencent-failure');const f=await fixture('tencent',{missingInput:true,diagnosticThrows:true,diagnosticsRoot:diagnosticDir});
-  try{await assert.rejects(()=>f.publisher.prepare(f.job),/唯一视频文件控件/);const files=fs.readdirSync(diagnosticDir).filter(n=>n.endsWith('.json'));assert.equal(files.length,1);const report=JSON.parse(fs.readFileSync(path.join(diagnosticDir,files[0])));assert.equal(report.platform,'tencent');assert.equal(report.errorCode,'UPLOAD_FORM_NOT_READY');assert.equal(report.diagnosticFailure.stage,'runtime_diagnostics');assert.equal(fs.statSync(path.join(diagnosticDir,files[0])).mode&0o777,0o600);}
+  try{await assert.rejects(()=>f.publisher.prepare(f.job),/唯一视频文件控件/);const files=fs.readdirSync(diagnosticDir).filter(n=>n.endsWith('.json'));assert.equal(files.length,1);const report=JSON.parse(fs.readFileSync(path.join(diagnosticDir,files[0])));assert.equal(report.platform,'tencent');assert.equal(report.errorCode,'UPLOAD_FORM_NOT_READY');assert.equal(report.diagnosticFailure.stage,'runtime_diagnostics');if(process.platform!=='win32')assert.equal(fs.statSync(path.join(diagnosticDir,files[0])).mode&0o777,0o600);}
   finally{await f.context.close();}
  });
  await t.test('视频号编辑器位于同一官方域名的内嵌页面时，仍在该表单完成准备与一次提交',async()=>{

@@ -894,7 +894,6 @@ class ManagedPublisher {
         error.code = 'SUBMIT_TIMEOUT';
         reject(error);
       }, timeoutMs);
-      if (timer && typeof timer.unref === 'function') timer.unref();
     });
     return Promise.race([promise, timeout]).finally(() => {
       if (timer) clearTimeout(timer);

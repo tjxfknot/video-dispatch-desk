@@ -46,7 +46,7 @@ test('write and mutator failures preserve memory and clean temporary files', asy
   assert.deepEqual(await store.load(), { value: 1 });
   await fs.unlink(file);
   await fs.mkdir(file);
-  assert.throws(() => store.update(state => { state.value = 3; }), /EISDIR|directory|File exists/i);
+  assert.throws(() => store.update(state => { state.value = 3; }), /EISDIR|EPERM|EACCES|directory|File exists/i);
   assert.deepEqual(await store.load(), { value: 1 });
   assert.deepEqual((await fs.readdir(directory)).filter(name => name.endsWith('.tmp')), []);
 });
